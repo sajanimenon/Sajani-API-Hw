@@ -44,13 +44,17 @@ def welcome():
 
 @app.route("/api/v1.0/precipitation")
 def precipitation():
-    PY = dt.date.today() - dt.timedelta(days=365)
-    CY = dt.date.today()
-    prcp_str = "SELECT date, prcp FROM measurement WHERE date >'"+str(PY)+"' AND date <='"+str(CY)+"'  ORDER BY date ASC"
-    precipitation = pd.read_sql(prcp_str, con=engine, columns=[["prcp"],["date"]])
-    #precipitation.set_index("date",inplace = true)
+    prcp_df = pd.read_sql("SELECT date, prcp FROM measurement", con=engine, columns=[["date"],["prcp"]])
+    prcp_df["date"] = pd.to_datetime(prcp_df["date"],format="%Y-%m-%d", errors="coerce")
+    pa_max_date = prcp_df["date"].max().date()
+    pa_today = pd.Timestamp(dt.date.today())
+    pa_min_date = (pa_max_date - dt.timedelta(days=365))
+    prcp_df = prcp_df.loc[prcp_df["date"]>=pa_min_date]
+    
+    PRCP_DICT = prcp_df.to_dict()    
+    return (jsonify(PRCP_DICT))
 
-    return precipitation.to_json(orient="records")
+
 
 @app.route("/api/v1.0/stations")
 def stations():
@@ -62,12 +66,16 @@ def stations():
 
 @app.route("/api/v1.0/tobs")
 def temp_monthly():
-    CY = dt.date.today()
-    PY = dt.date.today() - dt.timedelta(days=365)
-    tobs_str= "SELECT date, tobs FROM measurement WHERE date >'"+str(PY)+"' AND date <='"+str(CY)+"'  ORDER BY date ASC"
-    tobs_df = pd.read_sql(tobs_str, con=engine, columns=[["date"],["tobs"]])
-
-    return tobs_df.to_json(orient="records")
+    tobs_df = pd.read_sql("SELECT date, tobs FROM measurement", con=engine, columns=[["date"],["tobs"]])
+    tobs_df["date"] = pd.to_datetime(tobs_df["date"],format="%Y-%m-%d", errors="coerce")
+    pa_max_date = tobs_df["date"].max().date()
+    pa_today = pd.Timestamp(dt.date.today())
+    pa_min_date = (pa_max_date - dt.timedelta(days=365))
+    tobs_df = tobs_df.loc[tobs_df["date"]>=pa_min_date]
+    
+    TOBS_DICT = tobs_df.to_dict()    
+    return (jsonify(TOBS_DICT))
+    
 
 
 @app.route("/api/v1.0/temp/<start>")
